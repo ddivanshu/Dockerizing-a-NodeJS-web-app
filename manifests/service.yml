@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: "diaggarwaks-5cc4"
+    labels:
+        app: "diaggarwaks-5cc4"
+spec:
+    type: LoadBalancer
+    ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    selector:
+        app: "diaggarwaks-5cc4"

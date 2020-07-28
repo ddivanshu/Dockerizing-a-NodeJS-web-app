@@ -1,0 +1,50 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: acrjlw4ywfllmdl4.azurecr.io
+        username: ${{ secrets.acr_acrjlw4ywfllmdl4_username }}
+        password: ${{ secrets.acr_acrjlw4ywfllmdl4_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/" -f  "Dockerfile" -t acrjlw4ywfllmdl4.azurecr.io/diaggarwtest:${{ github.sha }}
+        docker push acrjlw4ywfllmdl4.azurecr.io/diaggarwtest:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_diaggarwtest_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep diaggarwtest69e1 | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace diaggarwtest69e1`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: diaggarwtest69e1
+        container-registry-url: acrjlw4ywfllmdl4.azurecr.io
+        container-registry-username: ${{ secrets.acr_acrjlw4ywfllmdl4_username }}
+        container-registry-password: ${{ secrets.acr_acrjlw4ywfllmdl4_password }}
+        secret-name: diaggarwtestdockerauth
+       
+    - uses: azure/k8s-deploy@v1
+      with:
+        namespace: diaggarwtest69e1
+        manifests: |
+          manifests/deployment-8.yml
+          manifests/service-8.yml
+        images: |
+          acrjlw4ywfllmdl4.azurecr.io/diaggarwtest:${{ github.sha }}
+        imagepullsecrets: |
+          diaggarwtestdockerauth
